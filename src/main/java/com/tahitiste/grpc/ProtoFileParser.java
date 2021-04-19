@@ -16,11 +16,17 @@ public class ProtoFileParser {
     private ProtoFileParser() {
     }
 
-    public static Descriptors.FileDescriptor parse(Path protoFile) {
+    /**
+     * <p>Parse a proto file, compile to its binary form using `protoc` compiler and return the FileDescriptor</p>
+     * @param protoFilePath : the path of the proto file (*.proto)
+     * @return a FileDescriptor
+     * @throws ProtoFileParseException if an error occurred
+     */
+    public static Descriptors.FileDescriptor parse(Path protoFilePath) {
 
         Path tempOutputFile = createTempFile();
 
-        generateBinaryProtoFile(protoFile, tempOutputFile);
+        generateBinaryProtoFile(protoFilePath, tempOutputFile);
 
         DescriptorProtos.FileDescriptorSet fileDescriptorSet = parseBinaryProtoFile(tempOutputFile);
 

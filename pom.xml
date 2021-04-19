@@ -5,10 +5,10 @@
 
     <modelVersion>4.0.0</modelVersion>
 
-    <artifactId>dynamic-grpc-client</artifactId>
-
     <groupId>com.tahitiste.grpc</groupId>
+    <artifactId>dynamic-grpc-client</artifactId>
     <version>1.0</version>
+
     <packaging>jar</packaging>
 
     <properties>

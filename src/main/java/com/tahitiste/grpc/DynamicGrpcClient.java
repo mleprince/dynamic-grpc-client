@@ -27,20 +27,48 @@ public class DynamicGrpcClient {
         this.channel = channel;
     }
 
+    /**
+     * Build a client without authentication mechanism (`plainText` mode)
+     * @param protoFilePath : *.proto file to parse
+     * @param hostname : hostName of the gRPC server
+     * @param port : port of the gRPC server
+     * @return DynamicGrpcClient
+     */
     public static DynamicGrpcClient build(Path protoFilePath, String hostname, int port) {
 
-        Channel channel = ManagedChannelBuilder.forAddress(hostname, port).usePlaintext().build();
+        Channel channel = ManagedChannelBuilder
+                .forAddress(hostname, port)
+                .usePlaintext()
+                .build();
 
         return new DynamicGrpcClient(ProtoFileParser.parse(protoFilePath), channel);
     }
 
-    public void asyncCall(String fullyQualifiedMethodName, String jsonBody, StreamObserver<DynamicMessage> streamObserver) {
+    /**
+     * Build a client with custom gRPC Channel
+     * @param protoFilePath : *.proto file to parse
+     * @param channel : gRPC channel
+     * @return DynamicGrpcClient
+     */
+    public static DynamicGrpcClient build(Path protoFilePath, Channel channel) {
+        return new DynamicGrpcClient(ProtoFileParser.parse(protoFilePath), channel);
+    }
+
+    /**
+     * Request an async call
+     * @param fullyQualifiedMethodName : name of the method with package name . ex : com.bioserenity.TestService.MyMethod
+     * @param requestBodyInJson : body of the request message in json. Can be null : message with default values will be sent
+     * @param streamObserver : callback used to listen the response from the server
+     * @throws MethodNotFoundInProtoFileException : method was not found in proto file
+     * @throws InvalidJsonProtobufException : the proto request message cannot be built with provided json
+     */
+    public void asyncCall(String fullyQualifiedMethodName, String requestBodyInJson, StreamObserver<DynamicMessage> streamObserver) {
         findMethod(fullyQualifiedMethodName)
                 .ifPresentOrElse(protobufMethodDescriptor -> {
 
                             ClientCall<DynamicMessage, DynamicMessage> clientCall = channel.newCall(getGrpcMethodDescriptor(protobufMethodDescriptor), CallOptions.DEFAULT);
 
-                            DynamicMessage requestMessage = buildRequestMessage(jsonBody, protobufMethodDescriptor.getInputType());
+                            DynamicMessage requestMessage = buildRequestMessage(requestBodyInJson, protobufMethodDescriptor.getInputType());
 
                             if (protobufMethodDescriptor.isClientStreaming()) {
                                 throw new InvalidMethodTypeException(fullyQualifiedMethodName, "Client streaming call is not supported");
@@ -56,6 +84,15 @@ public class DynamicGrpcClient {
                 );
     }
 
+
+    /**
+     * Request a blocking call
+     * @param fullyQualifiedMethodName : name of the method with package name . ex : com.bioserenity.TestService.MyMethod
+     * @param jsonBody : body of the request message in json. Can be null : message with default values will be sent
+     * @return either a response containg one message if the call is unary or a response contains an Iterator if the call is a server-streaming call
+     * @throws MethodNotFoundInProtoFileException : method was not found in proto file
+     * @throws InvalidJsonProtobufException : the proto request message cannot be built with provided json
+     */
     public Either<DynamicMessage, Iterator<DynamicMessage>> blockingCall(String fullyQualifiedMethodName, String jsonBody) {
         return findMethod(fullyQualifiedMethodName)
                 .map(protobufMethodDescriptor -> {
